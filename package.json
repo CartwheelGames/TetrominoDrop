@@ -1,0 +1,16 @@
+{
+  "name": "tetrimopolis",
+  "version": "1.0.0",
+  "description": "Tetrimopolis Test Project",
+  "main": "",
+  "repository": "private",
+  "scripts": {
+    "compile:ts": "tsc --outFile ./bin/js/game.js",
+    "inst": "npm install"
+  },
+  "author": "Michael Consoli",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "node-static": "^0.7.9"
+  }
+}
