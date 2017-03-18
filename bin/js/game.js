@@ -318,7 +318,7 @@ var TetrominoGame = (function () {
         }
     };
     TetrominoGame.prototype.getNewTetromino = function () {
-        var spawnY = this.gridVerticalSize;
+        var spawnY = this.gridVerticalSize - 1;
         var numberOfValidShapes = 7;
         var type = Math.floor(Math.random() * numberOfValidShapes) + 1;
         var spawnX = this.getRandomSpawnX(type);
@@ -339,6 +339,7 @@ var TetrominoGame = (function () {
             if (this.downKey.isDown) {
                 if (this.tryDropTetromino()) {
                     this.onInputApplied();
+                    this.timeOfNextAutoStep = this.game.time.now;
                 }
             }
             else if (this.upKey.isDown) {
@@ -427,7 +428,6 @@ var TetrominoGame = (function () {
     TetrominoGame.prototype.onInputApplied = function () {
         this.refreshNeeded = true;
         this.timeToAllowInput = this.game.time.now + this.inputCooldownTime;
-        this.timeOfNextAutoStep = this.game.time.now + this.timeBetweenSteps;
     };
     TetrominoGame.prototype.finalizeTetromino = function () {
         var _this = this;

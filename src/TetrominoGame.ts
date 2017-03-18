@@ -112,7 +112,7 @@ class TetrominoGame {
 		}
 	}
 	getNewTetromino() {
-		const spawnY = this.gridVerticalSize;
+		const spawnY = this.gridVerticalSize - 1;
 		const numberOfValidShapes = 7;
 		var type: TetrominoType = Math.floor(Math.random() * numberOfValidShapes) + 1;
 		var spawnX = this.getRandomSpawnX(type);
@@ -133,6 +133,7 @@ class TetrominoGame {
 			if (this.downKey.isDown) {
 				if (this.tryDropTetromino()) {
 					this.onInputApplied();
+					this.timeOfNextAutoStep = this.game.time.now;
 				}
 			}
 			else if (this.upKey.isDown) {
@@ -227,7 +228,6 @@ class TetrominoGame {
 	onInputApplied() {
 		this.refreshNeeded = true;
 		this.timeToAllowInput = this.game.time.now + this.inputCooldownTime;
-		this.timeOfNextAutoStep = this.game.time.now + this.timeBetweenSteps;
 	}
 	finalizeTetromino() {
 		if (this.currentTetromino != null) {
@@ -265,19 +265,26 @@ class TetrominoGame {
 				}
 			}
 		}
-		for (var i = 0, iMax = linesToClear.length; i < iMax; i++) {
-			for (var x = 0, xMax = this.gridHorizontalSize; x < xMax; x++) {
-				tile = this.getTileAtCoordinate(x, linesToClear[i]);
-				if (tile != null) {
-					tile.setType(TetrominoType.NONE);
+		if (linesToClear.length > 0)
+		{
+			for (var i = 0, iMax = linesToClear.length; i < iMax; i++) {
+				for (var x = 0, xMax = this.gridHorizontalSize; x < xMax; x++) {
+					tile = this.getTileAtCoordinate(x, linesToClear[i]);
+					if (tile != null) {
+						tile.setType(TetrominoType.NONE);
+					}
 				}
 			}
+			this.playerScore += linesToClear.length;
+			if (this.playerScore > this.topScore)
+			{
+				this.topScore = this.playerScore;
+			}
 		}
-		this.playerScore += linesToClear.length;
-		if (this.playerScore > this.topScore)
-		{
-			this.topScore = this.playerScore;
-		}
+	}
+	shiftLinesDown(startY:number, shiftAmount:number)
+	{
+		
 	}
 	render() {
 		if (this.refreshNeeded) {
