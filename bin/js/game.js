@@ -120,7 +120,7 @@ var ShapeController = (function () {
                 [
                     [0, 0, 0],
                     [1, 1, 1],
-                    [0, 1, 1]
+                    [0, 1, 0]
                 ],
                 [
                     [0, 1, 0],
@@ -206,17 +206,17 @@ var TetrominoActor = (function () {
     }
     return TetrominoActor;
 }());
-var TetronimoGame = (function () {
-    function TetronimoGame() {
+var TetrominoGame = (function () {
+    function TetrominoGame() {
         this.shapes = new ShapeController();
         this.colorLookup = [Phaser.Color.getColor(20, 20, 20),
             Phaser.Color.getColor(255, 128, 128),
             Phaser.Color.getColor(255, 128, 128),
             Phaser.Color.getColor(255, 128, 128),
             Phaser.Color.getColor(255, 128, 128),
-            Phaser.Color.getColor(255, 128, 128),
-            Phaser.Color.getColor(255, 128, 128),
-            Phaser.Color.getColor(255, 128, 128)]; //tetromino_I
+            Phaser.Color.getColor(255, 200, 128),
+            Phaser.Color.getColor(255, 128, 200),
+            Phaser.Color.getColor(128, 200, 255)]; //tetromino_I
         this.gridHorizontalSize = 10;
         this.gridVerticalSize = 22;
         this.timeToAllowInput = 0;
@@ -226,7 +226,7 @@ var TetronimoGame = (function () {
         this.refreshNeeded = false;
         this.game = new Phaser.Game(300, 480, Phaser.CANVAS, 'content', this);
     }
-    TetronimoGame.prototype.preload = function () {
+    TetrominoGame.prototype.preload = function () {
         // this.game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
         // this.game.scale.minWidth = 480;
         // this.game.scale.minHeight = 260;
@@ -241,7 +241,7 @@ var TetronimoGame = (function () {
         this.downKey = this.game.input.keyboard.addKey(Phaser.Keyboard.DOWN);
         this.upKey = this.game.input.keyboard.addKey(Phaser.Keyboard.UP);
     };
-    TetronimoGame.prototype.create = function () {
+    TetrominoGame.prototype.create = function () {
         var topMargin = 16;
         var bottomMargin = 16;
         var gridGroup = this.game.add.group();
@@ -263,7 +263,7 @@ var TetronimoGame = (function () {
         gridGroup.x = this.game.world.centerX - (gridGroup.width * 0.5);
         gridGroup.y = this.game.world.centerY - (gridGroup.height * 0.5) - tileSize;
     };
-    TetronimoGame.prototype.update = function () {
+    TetrominoGame.prototype.update = function () {
         if (this.currentTetromino == null) {
             this.currentTetromino = this.getNewTetromino();
         }
@@ -278,7 +278,7 @@ var TetronimoGame = (function () {
             }
         }
     };
-    TetronimoGame.prototype.getNewTetromino = function () {
+    TetrominoGame.prototype.getNewTetromino = function () {
         var spawnY = this.gridVerticalSize;
         var numberOfValidShapes = 7;
         var type = Math.floor(Math.random() * numberOfValidShapes) + 1;
@@ -287,7 +287,7 @@ var TetronimoGame = (function () {
         return new TetrominoActor(type, spawnX, spawnY);
     };
     /**According to the offical Tetris ruleset, O and I Tetrominos spawn in the center, while the others spawn in the center-left.*/
-    TetronimoGame.prototype.getRandomSpawnX = function (type) {
+    TetrominoGame.prototype.getRandomSpawnX = function (type) {
         var spawnAreaCellWidth = 4;
         var centerOffset = 2;
         var leftCenterOffset = 4;
@@ -295,7 +295,7 @@ var TetronimoGame = (function () {
         var offset = (type == TetrominoType.O || type == TetrominoType.I) ? centerOffset : leftCenterOffset;
         return center + (Math.floor(Math.random() * spawnAreaCellWidth) - offset);
     };
-    TetronimoGame.prototype.handleInput = function () {
+    TetrominoGame.prototype.handleInput = function () {
         if (this.currentTetromino != null && this.game.time.now > this.timeToAllowInput) {
             if (this.downKey.isDown) {
             }
@@ -316,52 +316,35 @@ var TetronimoGame = (function () {
             }
         }
     };
-    TetronimoGame.prototype.tryRotateTetromino = function () {
+    TetrominoGame.prototype.tryRotateTetromino = function () {
         if (this.currentTetromino != null) {
-            return false;
-        }
-    };
-    TetronimoGame.prototype.tryShiftTetromino = function (x, y) {
-        if (this.currentTetromino != null) {
-            if (this.getIsTetrominoFreeAtPosition(this.currentTetromino.x + x, this.currentTetromino.y + y)) {
-                this.currentTetromino.x += x;
-                this.currentTetromino.y += y;
-                //console.log(this.currentTetromino.x + "," + this.currentTetromino.y);
+            var newRotation = this.currentTetromino.rotation + 1;
+            if (newRotation >= 4) {
+                newRotation = 0;
+            }
+            if (this.getIsTetrominoFreeAtProjectedPosition(this.currentTetromino.type, newRotation, this.currentTetromino.x, this.currentTetromino.y)) {
+                this.currentTetromino.rotation = newRotation;
                 return true;
             }
         }
         return false;
     };
-    TetronimoGame.prototype.onInputApplied = function () {
+    TetrominoGame.prototype.tryShiftTetromino = function (x, y) {
+        if (this.currentTetromino != null) {
+            if (this.getIsTetrominoFreeAtProjectedPosition(this.currentTetromino.type, this.currentTetromino.rotation, this.currentTetromino.x + x, this.currentTetromino.y + y)) {
+                this.currentTetromino.x += x;
+                this.currentTetromino.y += y;
+                return true;
+            }
+        }
+        return false;
+    };
+    TetrominoGame.prototype.onInputApplied = function () {
         this.refreshNeeded = true;
         this.timeToAllowInput = this.game.time.now + this.inputCooldownTime;
     };
-    TetronimoGame.prototype.finalizeTetromino = function () {
+    TetrominoGame.prototype.finalizeTetromino = function () {
         var _this = this;
-        // if (this.currentTetromino != null)
-        // {
-        // 	var tetrominoPosX: number;
-        // 	var tetrominoPosY: number;
-        // 	var color: number;
-        // 	var tile: GridTile;
-        // 	var shape: number[][] = this.shapes.getShape(this.currentTetromino.type, this.currentTetromino.rotation);
-        // 	var shapeMax = shape[0].length;	//Width and height of the shape's field should be the same
-        // 	for (var x = 0; x < shapeMax; x++) {
-        // 		for (var y = 0; y < shapeMax; y++) {
-        // 			if (shape[x][y] > 0) {
-        // 				tetrominoPosX = this.currentTetromino.x + x;
-        // 				tetrominoPosY = this.currentTetromino.y + y;
-        // 				tile = this.getTileAtCoordinate(tetrominoPosX, tetrominoPosY);
-        // 				if (tile != null)
-        // 				{
-        // 					tile.setType(this.currentTetromino.type);
-        // 				}
-        // 			}
-        // 		}
-        // 	}
-        // 	console.log("FINAL");
-        // 	this.currentTetromino = null;
-        // }
         if (this.currentTetromino != null) {
             var currentTetrominoTiles = this.getTilesAtTetromino(this.currentTetromino);
             if (currentTetrominoTiles != null && currentTetrominoTiles.length > 0) {
@@ -374,17 +357,17 @@ var TetronimoGame = (function () {
             this.currentTetromino = null;
         }
     };
-    TetronimoGame.prototype.getIsTetrominoFreeAtPosition = function (offsetX, offsetY) {
+    TetrominoGame.prototype.getIsTetrominoFreeAtProjectedPosition = function (type, rotation, originX, originY) {
         var projectedPosX;
         var projectedPosY;
         var tile;
-        var shape = this.shapes.getShape(this.currentTetromino.type, this.currentTetromino.rotation);
+        var shape = this.shapes.getShape(type, rotation);
         var shapeMax = shape[0].length; //Width and height of the shape's field should be the same
         for (var x = 0; x < shapeMax; x++) {
             for (var y = 0; y < shapeMax; y++) {
                 if (shape[x][y] > 0) {
-                    projectedPosX = x + offsetX;
-                    projectedPosY = y + offsetY;
+                    projectedPosX = x + originX;
+                    projectedPosY = y + originY;
                     if (projectedPosX < 0 || projectedPosX >= this.gridHorizontalSize || projectedPosY < 0) {
                         return false;
                     }
@@ -397,7 +380,7 @@ var TetronimoGame = (function () {
         }
         return true;
     };
-    TetronimoGame.prototype.render = function () {
+    TetrominoGame.prototype.render = function () {
         if (this.refreshNeeded) {
             this.refreshGrid();
             if (this.currentTetromino != null) {
@@ -406,7 +389,7 @@ var TetronimoGame = (function () {
             this.refreshNeeded = false;
         }
     };
-    TetronimoGame.prototype.refreshGrid = function () {
+    TetrominoGame.prototype.refreshGrid = function () {
         var color;
         for (var x = 0, xMax = this.gridHorizontalSize; x < xMax; x++) {
             for (var y = 0, yMax = this.gridVerticalSize; y < yMax; y++) {
@@ -420,7 +403,7 @@ var TetronimoGame = (function () {
             }
         }
     };
-    TetronimoGame.prototype.drawCurrentTetronimo = function () {
+    TetrominoGame.prototype.drawCurrentTetronimo = function () {
         var color;
         var currentTetrominoTiles = this.getTilesAtTetromino(this.currentTetromino);
         if (currentTetrominoTiles != null && currentTetrominoTiles.length > 0) {
@@ -432,10 +415,10 @@ var TetronimoGame = (function () {
             });
         }
     };
-    TetronimoGame.prototype.getTilesAtTetromino = function (tetromino) {
+    TetrominoGame.prototype.getTilesAtTetromino = function (tetromino) {
         return this.getTilesAtProjectedTetromino(tetromino.type, tetromino.rotation, tetromino.x, tetromino.y);
     };
-    TetronimoGame.prototype.getTilesAtProjectedTetromino = function (type, rotation, originX, originY) {
+    TetrominoGame.prototype.getTilesAtProjectedTetromino = function (type, rotation, originX, originY) {
         var outputTiles = [];
         var tetrominoPosX;
         var tetrominoPosY;
@@ -454,7 +437,7 @@ var TetronimoGame = (function () {
         }
         return outputTiles;
     };
-    TetronimoGame.prototype.getTileAtCoordinate = function (x, y) {
+    TetrominoGame.prototype.getTileAtCoordinate = function (x, y) {
         if (x >= 0 && x < this.gridHorizontalSize) {
             if (y >= 0 && y < this.gridVerticalSize) {
                 if (this.gridTiles[x][y] != null) {
@@ -465,14 +448,14 @@ var TetronimoGame = (function () {
         return null;
     };
     /**Gets color from an index corresponding to a tyle type value, with bounds checking.*/
-    TetronimoGame.prototype.getColorFromIndex = function (index) {
+    TetrominoGame.prototype.getColorFromIndex = function (index) {
         if (index >= 0 || index < this.colorLookup.length) {
             return this.colorLookup[index];
         }
         return this.colorLookup[0];
     };
-    return TetronimoGame;
+    return TetrominoGame;
 }());
 window.onload = function () {
-    var game = new TetronimoGame();
+    var game = new TetrominoGame();
 };

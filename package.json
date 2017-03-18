@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Tetrimopolis Test Project",
   "main": "",
-  "repository": "private",
+  "repository": "git",
   "scripts": {
     "compile:ts": "tsc --outFile ./bin/js/game.js",
     "inst": "npm install"

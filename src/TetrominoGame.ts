@@ -1,4 +1,4 @@
-class TetronimoGame {
+class TetrominoGame {
 	game: Phaser.Game;
 	gridTiles: GridTile[][];
 	currentTetromino: TetrominoActor;
@@ -8,9 +8,9 @@ class TetronimoGame {
 	Phaser.Color.getColor(255, 128, 128),	//tetromino_S
 	Phaser.Color.getColor(255, 128, 128),	//tetromino_Z
 	Phaser.Color.getColor(255, 128, 128),	//tetromino_J
-	Phaser.Color.getColor(255, 128, 128),	//tetromino_L
-	Phaser.Color.getColor(255, 128, 128),	//tetromino_T
-	Phaser.Color.getColor(255, 128, 128)];	//tetromino_I
+	Phaser.Color.getColor(255, 200, 128),	//tetromino_L
+	Phaser.Color.getColor(255, 128, 200),	//tetromino_T
+	Phaser.Color.getColor(128, 200, 255)];	//tetromino_I
 	readonly gridHorizontalSize = 10;
 	readonly gridVerticalSize = 22;
 	timeToAllowInput: number = 0;
@@ -117,15 +117,29 @@ class TetronimoGame {
 	}
 	tryRotateTetromino() {
 		if (this.currentTetromino != null) {
-			return false;
+			var newRotation:number = this.currentTetromino.rotation + 1;
+			if (newRotation >= 4)
+			{
+				newRotation = 0;
+			}
+			if (this.getIsTetrominoFreeAtProjectedPosition(this.currentTetromino.type,
+					newRotation,
+					this.currentTetromino.x,
+					this.currentTetromino.y)) {
+				this.currentTetromino.rotation = newRotation;
+				return true;
+			}
 		}
+		return false;
 	}
 	tryShiftTetromino(x: number, y: number) {
 		if (this.currentTetromino != null) {
-			if (this.getIsTetrominoFreeAtPosition(this.currentTetromino.x + x, this.currentTetromino.y + y)) {
+			if (this.getIsTetrominoFreeAtProjectedPosition(this.currentTetromino.type,
+					this.currentTetromino.rotation,
+					this.currentTetromino.x + x,
+					this.currentTetromino.y + y)) {
 				this.currentTetromino.x += x;
 				this.currentTetromino.y += y;
-				//console.log(this.currentTetromino.x + "," + this.currentTetromino.y);
 				return true;
 			}
 		}
@@ -137,30 +151,6 @@ class TetronimoGame {
 	}
 	finalizeTetromino()
 	{
-		// if (this.currentTetromino != null)
-		// {
-		// 	var tetrominoPosX: number;
-		// 	var tetrominoPosY: number;
-		// 	var color: number;
-		// 	var tile: GridTile;
-		// 	var shape: number[][] = this.shapes.getShape(this.currentTetromino.type, this.currentTetromino.rotation);
-		// 	var shapeMax = shape[0].length;	//Width and height of the shape's field should be the same
-		// 	for (var x = 0; x < shapeMax; x++) {
-		// 		for (var y = 0; y < shapeMax; y++) {
-		// 			if (shape[x][y] > 0) {
-		// 				tetrominoPosX = this.currentTetromino.x + x;
-		// 				tetrominoPosY = this.currentTetromino.y + y;
-		// 				tile = this.getTileAtCoordinate(tetrominoPosX, tetrominoPosY);
-		// 				if (tile != null)
-		// 				{
-		// 					tile.setType(this.currentTetromino.type);
-		// 				}
-		// 			}
-		// 		}
-		// 	}
-		// 	console.log("FINAL");
-		// 	this.currentTetromino = null;
-		// }
 		if (this.currentTetromino != null) {
 			var currentTetrominoTiles: GridTile[] = this.getTilesAtTetromino(this.currentTetromino);
 			if (currentTetrominoTiles != null && currentTetrominoTiles.length > 0) {
@@ -174,17 +164,17 @@ class TetronimoGame {
 			this.currentTetromino = null;
 		}
 	}
-	getIsTetrominoFreeAtPosition(offsetX: number, offsetY: number) {
+	getIsTetrominoFreeAtProjectedPosition(type:TetrominoType, rotation:number, originX: number, originY: number) {
 		var projectedPosX: number;
 		var projectedPosY: number;
 		var tile: GridTile;
-		var shape: number[][] = this.shapes.getShape(this.currentTetromino.type, this.currentTetromino.rotation);
+		var shape: number[][] = this.shapes.getShape(type, rotation);
 		var shapeMax = shape[0].length;	//Width and height of the shape's field should be the same
 		for (var x = 0; x < shapeMax; x++) {
 			for (var y = 0; y < shapeMax; y++) {
 				if (shape[x][y] > 0) {
-					projectedPosX = x + offsetX;
-					projectedPosY = y + offsetY;
+					projectedPosX = x + originX;
+					projectedPosY = y + originY;
 					 if (projectedPosX < 0 || projectedPosX >= this.gridHorizontalSize || projectedPosY < 0)
 					{
 					 	return false;
@@ -279,5 +269,5 @@ class TetronimoGame {
 	}
 }
 window.onload = () => {
-	var game = new TetronimoGame();
+	var game = new TetrominoGame();
 }
