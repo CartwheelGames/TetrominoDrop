@@ -14,178 +14,6 @@ var GridTile = (function () {
     };
     return GridTile;
 }());
-//This would normally be a json file, easier to test on a desktop in a ts file because of browser restrictions on opening XML/JSON data
-var ShapeController = (function () {
-    function ShapeController() {
-        this.shapeDict = [];
-        this.shapeDict[TetrominoType.O] =
-            [
-                [
-                    [1, 1],
-                    [1, 1]
-                ],
-                [
-                    [1, 1],
-                    [1, 1]
-                ],
-                [
-                    [1, 1],
-                    [1, 1]
-                ],
-                [
-                    [1, 1],
-                    [1, 1]
-                ]
-            ];
-        this.shapeDict[TetrominoType.I] =
-            [
-                [
-                    [0, 0, 1, 0],
-                    [0, 0, 1, 0],
-                    [0, 0, 1, 0],
-                    [0, 0, 1, 0]
-                ],
-                [
-                    [0, 0, 0, 0],
-                    [0, 0, 0, 0],
-                    [1, 1, 1, 1],
-                    [0, 0, 0, 0]
-                ],
-                [
-                    [0, 1, 0, 0],
-                    [0, 1, 0, 0],
-                    [0, 1, 0, 0],
-                    [0, 1, 0, 0]
-                ],
-                [
-                    [0, 0, 0, 0],
-                    [1, 1, 1, 1],
-                    [0, 0, 0, 0],
-                    [0, 0, 0, 0]
-                ]
-            ];
-        this.shapeDict[TetrominoType.S] =
-            [
-                [
-                    [0, 1, 0],
-                    [0, 1, 1],
-                    [0, 0, 1]
-                ],
-                [
-                    [0, 0, 0],
-                    [0, 1, 1],
-                    [1, 1, 0]
-                ],
-                [
-                    [1, 0, 0],
-                    [1, 1, 0],
-                    [0, 1, 0]
-                ],
-                [
-                    [0, 1, 1],
-                    [1, 1, 0],
-                    [0, 0, 0]
-                ]
-            ];
-        this.shapeDict[TetrominoType.Z] =
-            [
-                [
-                    [0, 0, 1],
-                    [0, 1, 1],
-                    [0, 1, 0]
-                ],
-                [
-                    [0, 0, 0],
-                    [1, 1, 0],
-                    [0, 1, 1]
-                ],
-                [
-                    [0, 1, 0],
-                    [1, 1, 0],
-                    [1, 0, 0]
-                ],
-                [
-                    [1, 1, 0],
-                    [0, 1, 1],
-                    [0, 0, 0]
-                ]
-            ];
-        this.shapeDict[TetrominoType.T] =
-            [
-                [
-                    [0, 1, 0],
-                    [0, 1, 1],
-                    [0, 1, 0]
-                ],
-                [
-                    [0, 0, 0],
-                    [1, 1, 1],
-                    [0, 1, 0]
-                ],
-                [
-                    [0, 1, 0],
-                    [1, 1, 0],
-                    [0, 1, 0]
-                ],
-                [
-                    [0, 1, 0],
-                    [1, 1, 1],
-                    [0, 0, 0]
-                ]
-            ];
-        this.shapeDict[TetrominoType.L] =
-            [
-                [
-                    [0, 1, 0],
-                    [0, 1, 0],
-                    [0, 1, 1]
-                ],
-                [
-                    [0, 0, 0],
-                    [1, 1, 1],
-                    [1, 0, 0]
-                ],
-                [
-                    [1, 1, 0],
-                    [0, 1, 0],
-                    [0, 1, 0]
-                ],
-                [
-                    [0, 0, 1],
-                    [1, 1, 1],
-                    [0, 0, 0]
-                ]
-            ];
-        this.shapeDict[TetrominoType.J] =
-            [
-                [
-                    [0, 1, 1],
-                    [0, 1, 0],
-                    [0, 1, 0]
-                ],
-                [
-                    [0, 0, 0],
-                    [1, 1, 1],
-                    [0, 0, 1]
-                ],
-                [
-                    [0, 1, 0],
-                    [0, 1, 0],
-                    [1, 1, 0]
-                ],
-                [
-                    [1, 0, 0],
-                    [1, 1, 1],
-                    [0, 0, 0]
-                ]
-            ];
-    }
-    ShapeController.prototype.getShape = function (type, rotationIndex) {
-        if (rotationIndex === void 0) { rotationIndex = 0; }
-        return this.shapeDict[type][rotationIndex];
-    };
-    return ShapeController;
-}());
 var TetrominoType;
 (function (TetrominoType) {
     TetrominoType[TetrominoType["NONE"] = 0] = "NONE";
@@ -216,7 +44,6 @@ var GameplayState;
 })(GameplayState || (GameplayState = {}));
 var TetrominoGame = (function () {
     function TetrominoGame() {
-        this.shapes = new ShapeController();
         this.nextTetrominoColor = Phaser.Color.getColor(50, 50, 50);
         this.overtoppedColor = Phaser.Color.getColor(150, 150, 150);
         this.colorLookup = [Phaser.Color.getColor(20, 20, 20),
@@ -243,7 +70,7 @@ var TetrominoGame = (function () {
     /**Phaser calls this first. Meant for basic settings and loading assets into memory.*/
     TetrominoGame.prototype.preload = function () {
         this.game.load.image('tile', 'assets/tile.png');
-        this.game.load.json('shapes', 'http://cartwheelgames.com/demo/tetromino/assets/shapes.json');
+        this.game.load.json('shapes', '/demo/tetromino/assets/shapes.json');
     };
     /**Phaser fires this after the preload function, for initializing certain variables.*/
     TetrominoGame.prototype.create = function () {
@@ -255,7 +82,7 @@ var TetrominoGame = (function () {
         this.game.scale.pageAlignHorizontally = true;
         this.game.scale.pageAlignVertically = true;
         this.game.stage.backgroundColor = Phaser.Color.getColor(90, 90, 90);
-        var topPadding = -8;
+        var topPadding = 1;
         var verticalMargin = 60;
         var gridGroup = this.game.add.group();
         var tileSize = (this.game.height - verticalMargin) / this.gridVerticalSize;
@@ -283,9 +110,10 @@ var TetrominoGame = (function () {
         gridGroup.y = this.game.world.centerY - (gridGroup.height * 0.5) - tileSize + topPadding;
         //Text for score / reset message
         var style = { font: "13px Arial", fill: "#FFFFFF", align: "left" };
-        this.playerScoreText = this.game.add.text(16, this.game.world.height - 28, "", style);
-        this.topScoreText = this.game.add.text(96, this.game.world.height - 28, "", style);
-        this.messageText = this.game.add.text(196, this.game.world.height - 28, "R to Restart", style);
+        this.playerScoreText = this.game.add.text(16, this.game.world.height - 24, "", style);
+        this.topScoreText = this.game.add.text(96, this.game.world.height - 24, "", style);
+        this.game.add.text(196, this.game.world.height - 24, "R to Restart", style);
+        this.game.add.text(16, 8, "Tetromino Drop - Michael Consoli", style);
         this.refreshScoreDisplay();
         //Parse cached JSON for the shapes
         var shapesJSONCache = this.game.cache.getJSON('shapes');
@@ -299,6 +127,7 @@ var TetrominoGame = (function () {
     };
     /**When restarting the game, reset key variables.*/
     TetrominoGame.prototype.cleanup = function () {
+        this.nextTetromino = null;
         this.currentTetromino = null;
         this.timeToAllowInput = this.game.time.now + this.inputCooldownTime;
         this.timeOfNextAutoStep = this.game.time.now + this.timeBetweenSteps;
@@ -351,7 +180,7 @@ var TetrominoGame = (function () {
     TetrominoGame.prototype.getNewTetromino = function () {
         var numberOfValidShapes = 7;
         var type = Math.floor(Math.random() * numberOfValidShapes) + 1;
-        var shape = this.shapes.getShape(type);
+        var shape = this.getShapeAndRotation(type, 0);
         var spawnX = this.getRandomSpawnX(type);
         var spawnY = this.gridVerticalSize - (shape[1].length - 2);
         return new TetrominoActor(type, spawnX, spawnY);
@@ -442,7 +271,7 @@ var TetrominoGame = (function () {
         var projectedPosX;
         var projectedPosY;
         var tile;
-        var shape = this.shapes.getShape(type, rotation);
+        var shape = this.getShapeAndRotation(type, rotation);
         var shapeMax = shape[0].length; //Width and height of the shape's field should be the same
         for (var x = 0; x < shapeMax; x++) {
             for (var y = 0; y < shapeMax; y++) {
@@ -478,6 +307,7 @@ var TetrominoGame = (function () {
                         tile.setType(_this.currentTetromino.type);
                     }
                     else {
+                        _this.nextTetromino = null; //Make sure nextTetromino gets cleared and not drawn during the end phase.
                         _this.gameplayState = GameplayState.END;
                         _this.refreshNeeded = true;
                     }
@@ -579,7 +409,7 @@ var TetrominoGame = (function () {
         var verticalOffset;
         var tiles;
         if (this.nextTetromino != null) {
-            var shape = this.shapes.getShape(this.nextTetromino.type);
+            var shape = this.getShapeAndRotation(this.nextTetromino.type, 0);
             verticalOffset = this.gridVerticalSize - (shape[1].length + 1);
             tiles = this.getTilesAtProjectedTetromino(this.nextTetromino.type, 0, horizontalOffset, verticalOffset);
             color = this.nextTetrominoColor;
@@ -614,7 +444,7 @@ var TetrominoGame = (function () {
         var tetrominoPosX;
         var tetrominoPosY;
         var tile;
-        var shape = this.shapes.getShape(type, rotation);
+        var shape = this.getShapeAndRotation(type, rotation);
         var shapeMax = shape[0].length; //Width and height of the shape's field should be the same
         for (var x = 0; x < shapeMax; x++) {
             for (var y = 0; y < shapeMax; y++) {
@@ -645,6 +475,9 @@ var TetrominoGame = (function () {
             return this.colorLookup[index];
         }
         return this.colorLookup[0];
+    };
+    TetrominoGame.prototype.getShapeAndRotation = function (type, rotation) {
+        return this.shapeDict[type][rotation];
     };
     return TetrominoGame;
 }());

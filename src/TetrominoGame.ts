@@ -4,7 +4,6 @@ class TetrominoGame {
 	gridTiles: GridTile[][];
 	currentTetromino: TetrominoActor;
 	nextTetromino: TetrominoActor;
-	readonly shapes: ShapeController = new ShapeController();
 	readonly nextTetrominoColor: number = Phaser.Color.getColor(50, 50, 50);
 	readonly overtoppedColor: number = Phaser.Color.getColor(150, 150, 150);
 	readonly colorLookup = [Phaser.Color.getColor(20, 20, 20),	//Default, empty tile color
@@ -32,7 +31,6 @@ class TetrominoGame {
 	topScore: number = 0;
 	playerScoreText: Phaser.Text;
 	topScoreText: Phaser.Text;
-	messageText: Phaser.Text;
 	shapeDict = [];
 	constructor() {
 		this.game = new Phaser.Game(300, 480, Phaser.CANVAS, 'content', this);
@@ -40,7 +38,7 @@ class TetrominoGame {
 	/**Phaser calls this first. Meant for basic settings and loading assets into memory.*/
 	private preload() {
 		this.game.load.image('tile', 'assets/tile.png');
-		this.game.load.json('shapes', 'http://cartwheelgames.com/demo/tetromino/assets/shapes.json');
+		this.game.load.json('shapes', '/demo/tetromino/assets/shapes.json');
 	}
 	/**Phaser fires this after the preload function, for initializing certain variables.*/
 	private create() {
@@ -52,7 +50,7 @@ class TetrominoGame {
 		this.game.scale.pageAlignHorizontally = true;
 		this.game.scale.pageAlignVertically = true;
 		this.game.stage.backgroundColor = Phaser.Color.getColor(90, 90, 90);
-		const topPadding = -8;
+		const topPadding = 1;
 		const verticalMargin = 60;
 		var gridGroup = this.game.add.group();
 		var tileSize = (this.game.height - verticalMargin) / this.gridVerticalSize;
@@ -80,9 +78,10 @@ class TetrominoGame {
 		gridGroup.y = this.game.world.centerY - (gridGroup.height * 0.5) - tileSize + topPadding;
 		//Text for score / reset message
 		var style = { font: "13px Arial", fill: "#FFFFFF", align: "left" };
-		this.playerScoreText = this.game.add.text(16, this.game.world.height - 28, "", style);
-		this.topScoreText = this.game.add.text(96, this.game.world.height - 28, "", style);
-		this.messageText = this.game.add.text(196, this.game.world.height - 28, "R to Restart", style);
+		this.playerScoreText = this.game.add.text(16, this.game.world.height - 24, "", style);
+		this.topScoreText = this.game.add.text(96, this.game.world.height - 24, "", style);
+		this.game.add.text(196, this.game.world.height - 24, "R to Restart", style);
+		this.game.add.text(16, 8, "Tetromino Drop - Michael Consoli", style);
 		this.refreshScoreDisplay();
 		//Parse cached JSON for the shapes
 		var shapesJSONCache = this.game.cache.getJSON('shapes');
@@ -96,6 +95,7 @@ class TetrominoGame {
 	}
 	/**When restarting the game, reset key variables.*/
 	private cleanup() {
+		this.nextTetromino = null;
 		this.currentTetromino = null;
 		this.timeToAllowInput = this.game.time.now + this.inputCooldownTime;
 		this.timeOfNextAutoStep = this.game.time.now + this.timeBetweenSteps;
@@ -147,7 +147,7 @@ class TetrominoGame {
 	private getNewTetromino() {
 		const numberOfValidShapes = 7;
 		var type: TetrominoType = Math.floor(Math.random() * numberOfValidShapes) + 1;
-		var shape: number[][] = this.shapes.getShape(type);
+		var shape: number[][] = this.getShapeAndRotation(type, 0);
 		var spawnX = this.getRandomSpawnX(type);
 		var spawnY: number = this.gridVerticalSize - (shape[1].length - 2);
 		return new TetrominoActor(type, spawnX, spawnY);
@@ -244,7 +244,7 @@ class TetrominoGame {
 		var projectedPosX: number;
 		var projectedPosY: number;
 		var tile: GridTile;
-		var shape: number[][] = this.shapes.getShape(type, rotation);
+		var shape: number[][] = this.getShapeAndRotation(type, rotation);
 		var shapeMax = shape[0].length;	//Width and height of the shape's field should be the same
 		for (var x = 0; x < shapeMax; x++) {
 			for (var y = 0; y < shapeMax; y++) {
@@ -278,6 +278,7 @@ class TetrominoGame {
 					if (tile != null) {
 						tile.setType(this.currentTetromino.type);
 					} else {
+						this.nextTetromino = null;	//Make sure nextTetromino gets cleared and not drawn during the end phase.
 						this.gameplayState = GameplayState.END;
 						this.refreshNeeded = true;
 					}
@@ -382,7 +383,7 @@ class TetrominoGame {
 		var verticalOffset: number;
 		var tiles: GridTile[];
 		if (this.nextTetromino != null) {
-			var shape: number[][] = this.shapes.getShape(this.nextTetromino.type);
+			var shape: number[][] = this.getShapeAndRotation(this.nextTetromino.type, 0);
 			verticalOffset = this.gridVerticalSize - (shape[1].length + 1);
 			tiles = this.getTilesAtProjectedTetromino(this.nextTetromino.type, 0, horizontalOffset, verticalOffset);
 			color = this.nextTetrominoColor;
@@ -417,7 +418,7 @@ class TetrominoGame {
 		var tetrominoPosX : number;
 		var tetrominoPosY : number;
 		var tile : GridTile;
-		var shape : number[][] = this.shapes.getShape(type, rotation);
+		var shape : number[][] = this.getShapeAndRotation(type, rotation);
 		var shapeMax = shape[0].length;	//Width and height of the shape's field should be the same
 		for (var x = 0; x < shapeMax; x++) {
 			for (var y = 0; y < shapeMax; y++) {
@@ -448,6 +449,10 @@ class TetrominoGame {
 			return this.colorLookup[index];
 		}
 		return this.colorLookup[0];
+	}
+	private getShapeAndRotation(type:TetrominoType, rotation:number)
+	{
+		return this.shapeDict[type][rotation];
 	}
 }
 window.onload = () => {
