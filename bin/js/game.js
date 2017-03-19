@@ -217,49 +217,54 @@ var GameplayState;
 var TetrominoGame = (function () {
     function TetrominoGame() {
         this.shapes = new ShapeController();
+        this.nextTetrominoColor = Phaser.Color.getColor(50, 50, 50);
+        this.overtoppedColor = Phaser.Color.getColor(150, 150, 150);
         this.colorLookup = [Phaser.Color.getColor(20, 20, 20),
-            Phaser.Color.getColor(23, 167, 255),
-            Phaser.Color.getColor(12, 232, 25),
-            Phaser.Color.getColor(255, 255, 0),
-            Phaser.Color.getColor(232, 66, 12),
-            Phaser.Color.getColor(185, 13, 255),
-            Phaser.Color.getColor(73, 84, 255),
-            Phaser.Color.getColor(208, 255, 50)]; //tetromino_I
+            Phaser.Color.getColor(241, 196, 15),
+            Phaser.Color.getColor(41, 249, 93),
+            Phaser.Color.getColor(231, 76, 60),
+            Phaser.Color.getColor(36, 113, 163),
+            Phaser.Color.getColor(80, 114, 241),
+            Phaser.Color.getColor(142, 68, 173),
+            Phaser.Color.getColor(59, 198, 201)]; //tetromino_I color
         this.gridHorizontalSize = 10;
         this.gridVerticalSize = 22;
         this.timeToAllowInput = 0;
-        this.inputCooldownTime = 250;
+        this.inputCooldownTime = 150;
         this.timeOfNextAutoStep = 0;
         this.timeBetweenSteps = 500;
         this.refreshNeeded = false;
-        this.isOvertopped = false;
         this.gameplayState = GameplayState.PLAY;
         this.playerScore = 0;
         this.topScore = 0;
+        this.shapeDict = [];
         this.game = new Phaser.Game(300, 480, Phaser.CANVAS, 'content', this);
     }
+    /**Phaser calls this first. Meant for basic settings and loading assets into memory.*/
     TetrominoGame.prototype.preload = function () {
-        // this.game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
-        // this.game.scale.minWidth = 480;
-        // this.game.scale.minHeight = 260;
-        // this.game.scale.maxWidth = 1024;
-        // this.game.scale.maxHeight = 768;
+        this.game.load.image('tile', 'assets/tile.png');
+        this.game.load.json('shapes', 'http://cartwheelgames.com/demo/tetromino/assets/shapes.json');
+    };
+    /**Phaser fires this after the preload function, for initializing certain variables.*/
+    TetrominoGame.prototype.create = function () {
+        this.game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
+        this.game.scale.minWidth = 300;
+        this.game.scale.minHeight = 480;
+        this.game.scale.maxWidth = 400;
+        this.game.scale.maxHeight = 640;
         this.game.scale.pageAlignHorizontally = true;
         this.game.scale.pageAlignVertically = true;
-        this.game.stage.backgroundColor = 0xB2FFFF;
-        this.game.load.image('tile', 'assets/tile.png');
+        this.game.stage.backgroundColor = Phaser.Color.getColor(90, 90, 90);
+        var topPadding = -8;
+        var verticalMargin = 60;
+        var gridGroup = this.game.add.group();
+        var tileSize = (this.game.height - verticalMargin) / this.gridVerticalSize;
+        this.timeOfNextAutoStep = this.game.time.now + this.timeBetweenSteps;
         this.leftKey = this.game.input.keyboard.addKey(Phaser.Keyboard.LEFT);
         this.rightKey = this.game.input.keyboard.addKey(Phaser.Keyboard.RIGHT);
         this.downKey = this.game.input.keyboard.addKey(Phaser.Keyboard.DOWN);
         this.upKey = this.game.input.keyboard.addKey(Phaser.Keyboard.UP);
         this.restartKey = this.game.input.keyboard.addKey(Phaser.Keyboard.R);
-    };
-    TetrominoGame.prototype.create = function () {
-        var topMargin = 16;
-        var bottomMargin = 16;
-        var gridGroup = this.game.add.group();
-        var tileSize = (this.game.height - (topMargin + bottomMargin)) / this.gridVerticalSize;
-        this.timeOfNextAutoStep = this.game.time.now + this.timeBetweenSteps;
         //Populate grid with tiles
         this.gridTiles = [];
         for (var x = 0, xMax = this.gridHorizontalSize; x < xMax; x++) {
@@ -275,13 +280,28 @@ var TetrominoGame = (function () {
         }
         //Center the grid group on the screen
         gridGroup.x = this.game.world.centerX - (gridGroup.width * 0.5);
-        gridGroup.y = this.game.world.centerY - (gridGroup.height * 0.5) - tileSize;
+        gridGroup.y = this.game.world.centerY - (gridGroup.height * 0.5) - tileSize + topPadding;
+        //Text for score / reset message
+        var style = { font: "13px Arial", fill: "#FFFFFF", align: "left" };
+        this.playerScoreText = this.game.add.text(16, this.game.world.height - 28, "", style);
+        this.topScoreText = this.game.add.text(96, this.game.world.height - 28, "", style);
+        this.messageText = this.game.add.text(196, this.game.world.height - 28, "R to Restart", style);
+        this.refreshScoreDisplay();
+        //Parse cached JSON for the shapes
+        var shapesJSONCache = this.game.cache.getJSON('shapes');
+        this.shapeDict[TetrominoType.O] = shapesJSONCache.O;
+        this.shapeDict[TetrominoType.I] = shapesJSONCache.I;
+        this.shapeDict[TetrominoType.S] = shapesJSONCache.S;
+        this.shapeDict[TetrominoType.Z] = shapesJSONCache.Z;
+        this.shapeDict[TetrominoType.J] = shapesJSONCache.J;
+        this.shapeDict[TetrominoType.L] = shapesJSONCache.L;
+        this.shapeDict[TetrominoType.T] = shapesJSONCache.T;
     };
+    /**When restarting the game, reset key variables.*/
     TetrominoGame.prototype.cleanup = function () {
         this.currentTetromino = null;
         this.timeToAllowInput = this.game.time.now + this.inputCooldownTime;
         this.timeOfNextAutoStep = this.game.time.now + this.timeBetweenSteps;
-        this.isOvertopped = false;
         this.playerScore = 0;
         for (var x = 0, xMax = this.gridHorizontalSize; x < xMax; x++) {
             for (var y = 0, yMax = this.gridVerticalSize; y < yMax; y++) {
@@ -289,20 +309,30 @@ var TetrominoGame = (function () {
                 this.gridTiles[x][y].setTint(this.getColorFromIndex(0));
             }
         }
+        this.refreshScoreDisplay();
         this.refreshNeeded = true; //We do need to refresh the visuals after clearing everything
     };
+    /**Updates once per frame.*/
     TetrominoGame.prototype.update = function () {
         switch (this.gameplayState) {
             default:
             case GameplayState.PLAY:
                 if (this.currentTetromino == null) {
-                    this.currentTetromino = this.getNewTetromino();
+                    if (this.nextTetromino == null) {
+                        this.currentTetromino = this.getNewTetromino();
+                    }
+                    else {
+                        this.currentTetromino = this.nextTetromino;
+                    }
+                    this.timeOfNextAutoStep = this.game.time.now + this.timeBetweenSteps;
+                    this.timeToAllowInput = this.game.time.now + this.inputCooldownTime;
+                    this.nextTetromino = this.getNewTetromino();
                 }
                 else {
                     this.handleInput();
                     if (this.game.time.now > this.timeOfNextAutoStep) {
                         this.timeOfNextAutoStep = this.game.time.now + this.timeBetweenSteps;
-                        if (!this.tryShiftTetromino(0, -1)) {
+                        if (!this.tryShiftCurrentTetromino(0, -1)) {
                             this.finalizeTetromino();
                         }
                         this.refreshNeeded = true;
@@ -317,12 +347,13 @@ var TetrominoGame = (function () {
                 break;
         }
     };
+    /**Generates data for a new Tetromino.*/
     TetrominoGame.prototype.getNewTetromino = function () {
-        var spawnY = this.gridVerticalSize - 1;
         var numberOfValidShapes = 7;
         var type = Math.floor(Math.random() * numberOfValidShapes) + 1;
+        var shape = this.shapes.getShape(type);
         var spawnX = this.getRandomSpawnX(type);
-        this.timeOfNextAutoStep = this.game.time.now + this.timeBetweenSteps;
+        var spawnY = this.gridVerticalSize - (shape[1].length - 2);
         return new TetrominoActor(type, spawnX, spawnY);
     };
     /**According to the offical Tetris ruleset, O and I Tetrominos spawn in the center, while the others spawn in the center-left.*/
@@ -334,26 +365,27 @@ var TetrominoGame = (function () {
         var offset = (type == TetrominoType.O || type == TetrominoType.I) ? centerOffset : leftCenterOffset;
         return center + (Math.floor(Math.random() * spawnAreaCellWidth) - offset);
     };
+    /**Detects and processes input for the Play game state.*/
     TetrominoGame.prototype.handleInput = function () {
         if (this.currentTetromino != null && this.game.time.now > this.timeToAllowInput) {
             if (this.downKey.isDown) {
-                if (this.tryDropTetromino()) {
+                if (this.tryDropCurrentTetromino()) {
                     this.onInputApplied();
-                    this.timeOfNextAutoStep = this.game.time.now;
+                    this.timeOfNextAutoStep = this.game.time.now + this.timeBetweenSteps;
                 }
             }
             else if (this.upKey.isDown) {
-                if (this.tryRotateTetromino()) {
+                if (this.tryRotateCurrentTetromino()) {
                     this.onInputApplied();
                 }
             }
             else if (this.rightKey.isDown) {
-                if (this.tryShiftTetromino(1, 0)) {
+                if (this.tryShiftCurrentTetromino(1, 0)) {
                     this.onInputApplied();
                 }
             }
             else if (this.leftKey.isDown) {
-                if (this.tryShiftTetromino(-1, 0)) {
+                if (this.tryShiftCurrentTetromino(-1, 0)) {
                     this.onInputApplied();
                 }
             }
@@ -362,7 +394,8 @@ var TetrominoGame = (function () {
             }
         }
     };
-    TetrominoGame.prototype.tryRotateTetromino = function () {
+    /**Rotates the current Tetromino, if possible.*/
+    TetrominoGame.prototype.tryRotateCurrentTetromino = function () {
         if (this.currentTetromino != null) {
             var newRotation = this.currentTetromino.rotation + 1;
             if (newRotation >= 4) {
@@ -375,7 +408,8 @@ var TetrominoGame = (function () {
         }
         return false;
     };
-    TetrominoGame.prototype.tryShiftTetromino = function (x, y) {
+    /**Processes all movement for the currentTetromino.*/
+    TetrominoGame.prototype.tryShiftCurrentTetromino = function (x, y) {
         if (this.currentTetromino != null) {
             if (this.getIsTetrominoFreeAtProjectedPosition(this.currentTetromino.type, this.currentTetromino.rotation, this.currentTetromino.x + x, this.currentTetromino.y + y)) {
                 this.currentTetromino.x += x;
@@ -385,7 +419,8 @@ var TetrominoGame = (function () {
         }
         return false;
     };
-    TetrominoGame.prototype.tryDropTetromino = function () {
+    /**Will attempt to drop the currentTetromino to its lowest possible point.*/
+    TetrominoGame.prototype.tryDropCurrentTetromino = function () {
         var newY = this.currentTetromino.y;
         if (this.currentTetromino != null) {
             for (var i = this.currentTetromino.y - 1; i >= -2; i--) {
@@ -398,10 +433,11 @@ var TetrominoGame = (function () {
             }
         }
         if (newY != this.currentTetromino.y) {
-            return this.tryShiftTetromino(0, newY - this.currentTetromino.y);
+            return this.tryShiftCurrentTetromino(0, newY - this.currentTetromino.y);
         }
         return false;
     };
+    /**Checks to see if a hypothetical Tetromino would fit in a given position.*/
     TetrominoGame.prototype.getIsTetrominoFreeAtProjectedPosition = function (type, rotation, originX, originY) {
         var projectedPosX;
         var projectedPosY;
@@ -425,74 +461,109 @@ var TetrominoGame = (function () {
         }
         return true;
     };
+    /**Fire whenever player input has been successfully applied during the game.*/
     TetrominoGame.prototype.onInputApplied = function () {
         this.refreshNeeded = true;
         this.timeToAllowInput = this.game.time.now + this.inputCooldownTime;
     };
+    /**When the currentTetromino cannot descend any further, copy its data to the grid and unset its variable.*/
     TetrominoGame.prototype.finalizeTetromino = function () {
         var _this = this;
+        var currentTetrominoTiles;
         if (this.currentTetromino != null) {
-            var currentTetrominoTiles = this.getTilesAtTetromino(this.currentTetromino);
+            currentTetrominoTiles = this.getTilesAtTetromino(this.currentTetromino);
             if (currentTetrominoTiles != null && currentTetrominoTiles.length > 0) {
                 currentTetrominoTiles.forEach(function (tile) {
                     if (tile != null) {
                         tile.setType(_this.currentTetromino.type);
                     }
                     else {
-                        _this.isOvertopped = true;
                         _this.gameplayState = GameplayState.END;
+                        _this.refreshNeeded = true;
                     }
                 });
             }
-            this.clearCompletedLines();
+            this.clearCompletedRows();
             this.currentTetromino = null;
         }
     };
-    TetrominoGame.prototype.clearCompletedLines = function () {
+    TetrominoGame.prototype.clearCompletedRows = function () {
         var tile;
-        var linesToClear = [];
         for (var y = 0, yMax = this.gridVerticalSize; y < yMax; y++) {
             for (var x = 0, xMax = this.gridHorizontalSize; x < xMax; x++) {
                 tile = this.getTileAtCoordinate(x, y);
                 if (tile != null) {
-                    if (tile.type == 0) {
+                    if (tile.type == TetrominoType.NONE) {
                         break;
                     }
                     else if (x == xMax - 1) {
-                        linesToClear.push(y);
+                        this.dropGridAboveRow(y);
+                        this.scorePoint();
+                        y = -1;
+                        x = -1; //Restart the loops to clear / shift more rows.
                     }
                 }
             }
         }
-        for (var i = 0, iMax = linesToClear.length; i < iMax; i++) {
-            for (var x = 0, xMax = this.gridHorizontalSize; x < xMax; x++) {
-                tile = this.getTileAtCoordinate(x, linesToClear[i]);
+    };
+    /**Really only shifts the rows above target row down by one.*/
+    TetrominoGame.prototype.dropGridAboveRow = function (targetRow) {
+        var tile;
+        var aboveTile;
+        for (var x = 0, xMax = this.gridHorizontalSize; x < xMax; x++) {
+            for (var y = targetRow, yMax = this.gridVerticalSize; y < yMax; y++) {
+                tile = this.getTileAtCoordinate(x, y);
+                aboveTile = this.getTileAtCoordinate(x, y + 1);
                 if (tile != null) {
-                    tile.setType(TetrominoType.NONE);
+                    if (aboveTile != null) {
+                        tile.setType(aboveTile.type);
+                    }
+                    else {
+                        tile.setType(TetrominoType.NONE);
+                    }
                 }
             }
         }
-        this.playerScore += linesToClear.length;
+    };
+    TetrominoGame.prototype.scorePoint = function () {
+        this.playerScore++;
         if (this.playerScore > this.topScore) {
             this.topScore = this.playerScore;
         }
+        this.refreshScoreDisplay();
     };
+    /**Updates the current and top score dialogs.*/
+    TetrominoGame.prototype.refreshScoreDisplay = function () {
+        this.playerScoreText.text = "Score: " + this.playerScore;
+        this.topScoreText.text = "Top Score: " + this.topScore;
+    };
+    //#region Render the Grid and Tetronimos
     TetrominoGame.prototype.render = function () {
         if (this.refreshNeeded) {
             this.refreshGrid();
-            if (this.currentTetromino != null) {
+            if (this.nextTetromino != null && this.gameplayState == GameplayState.PLAY) {
+                this.drawNextTetronimo();
+            }
+            if (this.currentTetromino != null && this.gameplayState == GameplayState.PLAY) {
                 this.drawCurrentTetronimo();
             }
             this.refreshNeeded = false;
         }
     };
+    /**Redraws the grid background and landed bricks. nextTetromino and currentTetromino not included in this pass.*/
     TetrominoGame.prototype.refreshGrid = function () {
         var color;
         for (var x = 0, xMax = this.gridHorizontalSize; x < xMax; x++) {
             for (var y = 0, yMax = this.gridVerticalSize; y < yMax; y++) {
                 var tile = this.getTileAtCoordinate(x, y);
                 if (tile != null) {
-                    color = this.getColorFromIndex(tile.type);
+                    //When the player is overtopping the grid, render the tiles as grey.
+                    if (this.gameplayState == GameplayState.END && tile.type != TetrominoType.NONE) {
+                        color = this.overtoppedColor;
+                    }
+                    else {
+                        color = this.getColorFromIndex(tile.type);
+                    }
                     if (tile.getTint() != color) {
                         tile.setTint(color);
                     }
@@ -500,21 +571,44 @@ var TetrominoGame = (function () {
             }
         }
     };
+    /**Draws the nextTetronimo. Reusing some spaces in the upper left corner rather than add more hud elements. */
+    TetrominoGame.prototype.drawNextTetronimo = function () {
+        var _this = this;
+        var color;
+        var horizontalOffset = 1;
+        var verticalOffset;
+        var tiles;
+        if (this.nextTetromino != null) {
+            var shape = this.shapes.getShape(this.nextTetromino.type);
+            verticalOffset = this.gridVerticalSize - (shape[1].length + 1);
+            tiles = this.getTilesAtProjectedTetromino(this.nextTetromino.type, 0, horizontalOffset, verticalOffset);
+            color = this.nextTetrominoColor;
+            tiles.forEach(function (tile) {
+                if (tile != null && tile.getTint() == _this.getColorFromIndex(0)) {
+                    tile.setTint(color);
+                }
+            });
+        }
+    };
+    /**Draws the currentTetronimo in its specified position.*/
     TetrominoGame.prototype.drawCurrentTetronimo = function () {
         var color;
-        var currentTetrominoTiles = this.getTilesAtTetromino(this.currentTetromino);
-        if (currentTetrominoTiles != null && currentTetrominoTiles.length > 0) {
+        var tiles = this.getTilesAtTetromino(this.currentTetromino);
+        if (tiles != null && tiles.length > 0) {
             color = this.getColorFromIndex(this.currentTetromino.type);
-            currentTetrominoTiles.forEach(function (tile) {
+            tiles.forEach(function (tile) {
                 if (tile != null && tile.getTint() != color) {
                     tile.setTint(color);
                 }
             });
         }
     };
+    //#endregion
+    /**Gets an array of all tiles that would overlap with a tetromino given its current position/rotation.*/
     TetrominoGame.prototype.getTilesAtTetromino = function (tetromino) {
         return this.getTilesAtProjectedTetromino(tetromino.type, tetromino.rotation, tetromino.x, tetromino.y);
     };
+    /**Gets an array of all tiles that would overlap with a tetromino at a given point and rotation.*/
     TetrominoGame.prototype.getTilesAtProjectedTetromino = function (type, rotation, originX, originY) {
         var outputTiles = [];
         var tetrominoPosX;
@@ -534,6 +628,7 @@ var TetrominoGame = (function () {
         }
         return outputTiles;
     };
+    /**Return a specific tile from a given x,y coordinate set, with bounds checking.*/
     TetrominoGame.prototype.getTileAtCoordinate = function (x, y) {
         if (x >= 0 && x < this.gridHorizontalSize) {
             if (y >= 0 && y < this.gridVerticalSize) {
